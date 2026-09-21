@@ -1,0 +1,50 @@
+name: Build GNSS Fit APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract project
+        shell: bash
+        run: |
+          ZIP_FILE="$(find . -maxdepth 1 -type f -name 'gnss-fit*.zip' | head -n 1)"
+          unzip -q "$ZIP_FILE" -d extracted
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Build APK
+        working-directory: extracted/gnss-fit
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: gnss-fit-debug-apk
+          path: extracted/gnss-fit/app/build/outputs/apk/debug/app-debug.apk
